@@ -409,9 +409,8 @@
     <div style="margin-bottom:10px;">
       <label style="font-size:.78rem;font-weight:600;color:var(--gray);display:block;margin-bottom:5px;">🗣️ النموذج</label>
       <select id="modelSelect" style="width:100%;border:1.5px solid #e5e7eb;border-radius:8px;padding:8px 10px;font-size:.85rem;font-family:inherit;outline:none;">
-        <option value="silma-ai/silma-tts">silma-ai/silma-tts (نجدي — موصى به)</option>
-        <option value="NAMAA-Space/NAMAA-Saudi-TTS">NAMAA-Space/NAMAA-Saudi-TTS (نجدي)</option>
-        <option value="facebook/mms-tts-ara">facebook/mms-tts-ara (عربي فصيح)</option>
+        <option value="facebook/mms-tts-ara">facebook/mms-tts-ara ✅ (موصى به — يعمل مباشرةً)</option>
+        <option value="espnet/kan-bayashi_arabic_tts_vits">espnet/kan-bayashi_arabic_tts_vits (عربي)</option>
       </select>
     </div>
 
@@ -606,37 +605,45 @@
       hfAudio.style.display = 'none';
 
       try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ inputs: text }),
-        });
+        let response;
+        try {
+          response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ inputs: text }),
+          });
+        } catch (networkErr) {
+          throw new Error('تعذّر الاتصال بـ HuggingFace. تأكدي من اتصالك بالإنترنت، أو جربي زر التشغيل الفوري بدلاً من ذلك.');
+        }
 
+        if (response.status === 401) {
+          throw new Error('التوكن غير صحيح — تأكدي من نسخه كاملاً من huggingface.co/settings/tokens');
+        }
         if (response.status === 503) {
           hfStatus.textContent = '⏳ النموذج يتحمّل، انتظري 20 ثانية وأعيدي المحاولة...';
           return;
         }
-
+        if (response.status === 404) {
+          throw new Error('النموذج لا يدعم Inference API المجاني — جربي النموذج الآخر من القائمة');
+        }
         if (!response.ok) {
           const err = await response.text();
-          throw new Error(`HTTP ${response.status}: ${err}`);
+          throw new Error(`خطأ ${response.status}: ${err}`);
         }
 
         const contentType = response.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           const data = await response.json();
-          // some models return base64 audio
           if (data.audio) {
             const audioBlob = b64ToBlob(data.audio, 'audio/wav');
             playBlob(audioBlob);
           } else {
-            throw new Error('النموذج أرجع JSON بدون بيانات صوت — جربي نموذج آخر');
+            throw new Error('النموذج لا يدعم هذه الطريقة — جربي النموذج الآخر');
           }
         } else {
-          // raw audio bytes
           const blob = await response.blob();
           playBlob(blob);
         }
