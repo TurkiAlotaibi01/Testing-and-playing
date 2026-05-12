@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saudi Najdi TTS — نص إلى صوت نجدي</title>
+  <style>
+    :root {
+      --rose:    #e91e8c;
+      --rose-lt: #f472b6;
+      --rose-bg: #fdf2f8;
+      --sand:    #f5ede0;
+      --sand-d:  #d4a96a;
+      --white:   #ffffff;
+      --gray:    #6b7280;
+      --dark:    #1f2937;
+      --radius:  16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', 'Noto Kufi Arabic', Tahoma, sans-serif;
+      background: linear-gradient(135deg, var(--rose-bg) 0%, var(--sand) 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+      color: var(--dark);
+    }
+
+    header { text-align: center; margin-bottom: 28px; }
+    .crown { font-size: 2.6rem; line-height: 1; }
+    header h1 {
+      font-size: 1.9rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--rose), var(--sand-d));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 6px 0 4px;
+    }
+    header p { color: var(--gray); font-size: .9rem; }
+
+    .badges {
+      display: flex; gap: 8px; justify-content: center;
+      flex-wrap: wrap; margin-bottom: 24px;
+    }
+    .badge {
+      background: var(--white);
+      border: 1.5px solid var(--rose-lt);
+      color: var(--rose);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: .78rem;
+      font-weight: 700;
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 32px rgba(233,30,140,.12);
+      padding: 26px;
+      width: 100%;
+      max-width: 680px;
+    }
+    .card + .card { margin-top: 18px; }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-subtitle {
+      font-size: .75rem;
+      font-weight: 400;
+      color: var(--gray);
+      margin-right: auto;
+    }
+
+    /* ── Textarea ── */
+    textarea {
+      width: 100%;
+      min-height: 150px;
+      border: 1.5px solid #f9a8d4;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 1.1rem;
+      font-family: inherit;
+      direction: rtl;
+      text-align: right;
+      resize: vertical;
+      outline: none;
+      color: var(--dark);
+      background: var(--rose-bg);
+      line-height: 1.8;
+      transition: border-color .15s;
+    }
+    textarea:focus { border-color: var(--rose); }
+    textarea::placeholder { color: #d1afc0; }
+
+    .char-count {
+      font-size: .75rem;
+      color: var(--gray);
+      text-align: left;
+      margin-top: 6px;
+    }
+
+    /* ── Controls row ── */
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .control-group label {
+      display: block;
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--gray);
+      margin-bottom: 5px;
+    }
+
+    select, input[type="range"] {
+      width: 100%;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: .85rem;
+      font-family: inherit;
+      background: #fff;
+      color: var(--dark);
+      outline: none;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    select:focus { border-color: var(--rose-lt); }
+
+    input[type="range"] {
+      padding: 10px 0;
+      border: none;
+      accent-color: var(--rose);
+      cursor: pointer;
+    }
+
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .range-val {
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--rose);
+      min-width: 32px;
+      text-align: center;
+    }
+
+    /* ── Play button ── */
+    #playBtn {
+      width: 100%;
+      margin-top: 18px;
+      padding: 14px;
+      background: linear-gradient(90deg, var(--rose), #c2185b);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      letter-spacing: .3px;
+    }
+    #playBtn:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+    #playBtn:active { transform: translateY(0); }
+    #playBtn:disabled { opacity: .45; cursor: not-allowed; }
+    #playBtn.playing {
+      background: linear-gradient(90deg, #ef4444, #b91c1c);
+      animation: pulse 1.4s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 4px 20px rgba(239,68,68,.5); }
+      50%       { box-shadow: 0 4px 32px rgba(239,68,68,.8); }
+    }
+
+    /* ── Visual progress bar ── */
+    .progress-wrap {
+      margin-top: 14px;
+      background: #f3f4f6;
+      border-radius: 999px;
+      height: 6px;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-wrap.visible { display: block; }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--rose), var(--sand-d));
+      width: 0%;
+      border-radius: 999px;
+      transition: width .3s linear;
+    }
+
+    /* ── Status ── */
+    #statusMsg {
+      text-align: center;
+      font-size: .85rem;
+      color: var(--gray);
+      margin-top: 10px;
+      min-height: 20px;
+    }
+    #statusMsg.active { color: var(--rose); font-weight: 600; }
+
+    /* ── HF section ── */
+    .hf-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .hf-row label {
+      font-size: .82rem;
+      font-weight: 600;
+      white-space: nowrap;
+      color: var(--gray);
+    }
+    .hf-row input[type="password"] {
+      flex: 1;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: .85rem;
+      direction: ltr;
+      outline: none;
+      font-family: inherit;
+      transition: border-color .15s;
+    }
+    .hf-row input[type="password"]:focus { border-color: var(--rose-lt); }
+
+    #hfSpeakBtn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 12px;
+      background: linear-gradient(90deg, #7c3aed, #5b21b6);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    #hfSpeakBtn:disabled { opacity: .45; cursor: not-allowed; }
+    #hfSpeakBtn:not(:disabled):hover { opacity: .88; }
+
+    audio {
+      width: 100%;
+      margin-top: 14px;
+      border-radius: 10px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2.5px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Info ── */
+    .info-box {
+      background: #f0fdf4;
+      border: 1.5px solid #86efac;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: .83rem;
+      line-height: 1.7;
+      color: #166534;
+      direction: rtl;
+    }
+    .info-box a { color: var(--rose); text-decoration: none; font-weight: 700; }
+    .info-box a:hover { text-decoration: underline; }
+    .info-box code {
+      background: #dcfce7;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: .8rem;
+    }
+
+    .voice-note {
+      background: #fff7ed;
+      border: 1.5px solid #fdba74;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: .8rem;
+      color: #9a3412;
+      margin-top: 10px;
+      direction: rtl;
+      line-height: 1.6;
+    }
+
+    footer {
+      margin-top: 28px;
+      font-size: .78rem;
+      color: #d1afc0;
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      header h1 { font-size: 1.4rem; }
+      .card { padding: 18px; }
+      .controls { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="crown">👸🏻</div>
+    <h1>نص إلى صوت نجدي</h1>
+    <p>Saudi Najdi Dialect Text-to-Speech</p>
+  </header>
+
+  <div class="badges">
+    <span class="badge">🎙️ لهجة نجدية</span>
+    <span class="badge">👩 صوت بنت</span>
+    <span class="badge">🆓 مجاني</span>
+    <span class="badge">⚡ فوري</span>
+  </div>
+
+  <!-- ── Method 1: Web Speech API ── -->
+  <div class="card">
+    <div class="card-title">
+      🔊 تحويل فوري
+      <span class="card-subtitle">Web Speech API · مجاني بدون حساب</span>
+    </div>
+
+    <textarea id="textInput" placeholder="اكتبي نصك هنا بالعربي... مثال: وش لونك؟ كيف حالك؟ عساك بخير؟" maxlength="3000"></textarea>
+    <div class="char-count"><span id="charCount">0</span> / 3000</div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>🎤 الصوت</label>
+        <select id="voiceSelect">
+          <option value="">جاري تحميل الأصوات...</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>🐢 سرعة الكلام</label>
+        <div class="range-row">
+          <input type="range" id="rateSlider" min="0.5" max="1.5" step="0.05" value="0.85" />
+          <span class="range-val" id="rateVal">0.85</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>🎵 طبقة الصوت (Pitch)</label>
+        <div class="range-row">
+          <input type="range" id="pitchSlider" min="0.8" max="2.0" step="0.05" value="1.2" />
+          <span class="range-val" id="pitchVal">1.2</span>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>🔈 مستوى الصوت</label>
+        <div class="range-row">
+          <input type="range" id="volSlider" min="0" max="1" step="0.05" value="1" />
+          <span class="range-val" id="volVal">1.0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="voice-note" id="voiceNote" style="display:none;"></div>
+
+    <button id="playBtn" disabled>▶️ تشغيل الصوت</button>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div id="statusMsg">اكتبي نصاً ثم اضغطي تشغيل</div>
+  </div>
+
+  <!-- ── Method 2: HuggingFace SILMA TTS ── -->
+  <div class="card">
+    <div class="card-title">
+      ✨ صوت نجدي عالي الجودة
+      <span class="card-subtitle">SILMA-TTS · HuggingFace (مجاني)</span>
+    </div>
+
+    <p style="font-size:.83rem;color:var(--gray);margin-bottom:12px;direction:rtl;line-height:1.6;">
+      نموذج <strong>SILMA-TTS</strong> مخصص للهجة النجدية السعودية — جودة أعلى من المتصفح.
+      احصلي على توكن مجاني من
+      <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:var(--rose);font-weight:700;">HuggingFace</a>.
+    </p>
+
+    <div class="hf-row">
+      <label for="hfToken">🔑 HF Token:</label>
+      <input type="password" id="hfToken" placeholder="hf_xxxxxxxxxxxxxxxx" autocomplete="off" />
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <label style="font-size:.78rem;font-weight:600;color:var(--gray);display:block;margin-bottom:5px;">🗣️ النموذج</label>
+      <select id="modelSelect" style="width:100%;border:1.5px solid #e5e7eb;border-radius:8px;padding:8px 10px;font-size:.85rem;font-family:inherit;outline:none;">
+        <option value="silma-ai/silma-tts">silma-ai/silma-tts (نجدي — موصى به)</option>
+        <option value="NAMAA-Space/NAMAA-Saudi-TTS">NAMAA-Space/NAMAA-Saudi-TTS (نجدي)</option>
+        <option value="facebook/mms-tts-ara">facebook/mms-tts-ara (عربي فصيح)</option>
+      </select>
+    </div>
+
+    <button id="hfSpeakBtn">🌸 توليد الصوت النجدي</button>
+    <audio id="hfAudio" controls style="display:none;"></audio>
+    <div id="hfStatus" style="font-size:.82rem;color:var(--gray);margin-top:8px;text-align:center;min-height:18px;direction:rtl;"></div>
+  </div>
+
+  <!-- ── Info ── -->
+  <div class="card">
+    <div class="info-box">
+      <strong>كيف يعمل؟ 🌸</strong><br/>
+      <strong>التحويل الفوري:</strong> يستخدم <code>Web Speech API</code> المدمج في المتصفح. يعمل في Chrome وEdge مباشرةً بدون أي مفتاح — اختاري صوت أنثى من القائمة للحصول على صوت بنت.<br/><br/>
+      <strong>الصوت النجدي عالي الجودة:</strong> يستخدم <a href="https://huggingface.co/silma-ai/silma-tts" target="_blank">SILMA-TTS</a> وهو نموذج مفتوح المصدر مدرّب على اللهجة النجدية السعودية. يتطلب توكن مجاني من HuggingFace فقط.<br/><br/>
+      💡 <strong>نصيحة:</strong> للصوت النجدي الأصيل — استخدمي SILMA-TTS. للاستخدام السريع اليومي — استخدمي التحويل الفوري.
+    </div>
+  </div>
+
+  <footer>Made with 💗 for Najdi voices</footer>
+
+  <script>
+    /* ═══════════════════════════════════════
+       Web Speech API — TTS
+    ═══════════════════════════════════════ */
+    const textInput   = document.getElementById('textInput');
+    const charCount   = document.getElementById('charCount');
+    const voiceSelect = document.getElementById('voiceSelect');
+    const rateSlider  = document.getElementById('rateSlider');
+    const pitchSlider = document.getElementById('pitchSlider');
+    const volSlider   = document.getElementById('volSlider');
+    const rateVal     = document.getElementById('rateVal');
+    const pitchVal    = document.getElementById('pitchVal');
+    const volVal      = document.getElementById('volVal');
+    const playBtn     = document.getElementById('playBtn');
+    const statusMsg   = document.getElementById('statusMsg');
+    const progressWrap = document.getElementById('progressWrap');
+    const progressBar  = document.getElementById('progressBar');
+    const voiceNote    = document.getElementById('voiceNote');
+
+    let voices = [];
+    let progressTimer = null;
+    let speaking = false;
+
+    // char counter
+    textInput.addEventListener('input', () => {
+      charCount.textContent = textInput.value.length;
+      playBtn.disabled = textInput.value.trim().length === 0;
+    });
+
+    // sliders
+    rateSlider.addEventListener('input',  () => rateVal.textContent  = parseFloat(rateSlider.value).toFixed(2));
+    pitchSlider.addEventListener('input', () => pitchVal.textContent = parseFloat(pitchSlider.value).toFixed(2));
+    volSlider.addEventListener('input',   () => volVal.textContent   = parseFloat(volSlider.value).toFixed(1));
+
+    // load voices
+    function loadVoices() {
+      voices = window.speechSynthesis.getVoices();
+      voiceSelect.innerHTML = '';
+
+      // prefer ar-SA, then ar, then all
+      const arSA   = voices.filter(v => v.lang === 'ar-SA');
+      const arOther = voices.filter(v => v.lang.startsWith('ar') && v.lang !== 'ar-SA');
+
+      if (arSA.length === 0 && arOther.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '⚠️ لا يوجد صوت عربي — جربي Chrome على Windows';
+        voiceSelect.appendChild(opt);
+        showVoiceNote('لم يتم العثور على صوت عربي في متصفحك. جربي Google Chrome على Windows حيث تتوفر أصوات Microsoft Zariyah وHamed للعربية السعودية.');
+      } else {
+        // put female-sounding voices first
+        const sorted = [...arSA, ...arOther].sort((a, b) => {
+          const femaleKeywords = ['zariyah', 'female', 'woman', 'girl', 'fatima', 'hessa', 'نور', 'زارية'];
+          const aF = femaleKeywords.some(k => a.name.toLowerCase().includes(k)) ? 0 : 1;
+          const bF = femaleKeywords.some(k => b.name.toLowerCase().includes(k)) ? 0 : 1;
+          return aF - bF;
+        });
+
+        sorted.forEach((v, i) => {
+          const opt = document.createElement('option');
+          opt.value = v.name;
+          const isFemale = /zariyah|female|woman|girl|fatima|hessa|نور|زارية/i.test(v.name);
+          opt.textContent = `${isFemale ? '👩' : '👤'} ${v.name} (${v.lang})${i === 0 ? ' ★' : ''}`;
+          voiceSelect.appendChild(opt);
+        });
+
+        const hasFemale = sorted.some(v => /zariyah|female|woman|girl|fatima|hessa|نور|زارية/i.test(v.name));
+        if (!hasFemale) {
+          showVoiceNote('للحصول على صوت بنت نجدي أصيل، استخدمي قسم SILMA-TTS أدناه أو شغّلي Chrome على Windows لتحميل صوت Microsoft Zariyah تلقائياً.');
+        }
+      }
+    }
+
+    function showVoiceNote(msg) {
+      voiceNote.textContent = '💡 ' + msg;
+      voiceNote.style.display = 'block';
+    }
+
+    if (!window.speechSynthesis) {
+      statusMsg.textContent = '⚠️ المتصفح لا يدعم Text-to-Speech — استخدمي Chrome';
+      playBtn.disabled = true;
+    } else {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      loadVoices();
+    }
+
+    // Play / Stop
+    playBtn.addEventListener('click', () => {
+      if (speaking) {
+        window.speechSynthesis.cancel();
+        stopPlayback();
+        return;
+      }
+
+      const text = textInput.value.trim();
+      if (!text) return;
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ar-SA';
+      utterance.rate   = parseFloat(rateSlider.value);
+      utterance.pitch  = parseFloat(pitchSlider.value);
+      utterance.volume = parseFloat(volSlider.value);
+
+      // find chosen voice
+      const chosen = voices.find(v => v.name === voiceSelect.value);
+      if (chosen) utterance.voice = chosen;
+
+      utterance.onstart = () => {
+        speaking = true;
+        playBtn.textContent = '⏹️ إيقاف';
+        playBtn.classList.add('playing');
+        statusMsg.textContent = '🔊 جاري التشغيل...';
+        statusMsg.classList.add('active');
+        startProgress(text.length);
+      };
+
+      utterance.onend = () => stopPlayback();
+      utterance.onerror = (e) => {
+        statusMsg.textContent = `❌ خطأ: ${e.error}`;
+        stopPlayback();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    });
+
+    function stopPlayback() {
+      speaking = false;
+      playBtn.textContent = '▶️ تشغيل الصوت';
+      playBtn.classList.remove('playing');
+      statusMsg.textContent = 'اكتبي نصاً ثم اضغطي تشغيل';
+      statusMsg.classList.remove('active');
+      progressWrap.classList.remove('visible');
+      progressBar.style.width = '0%';
+      clearInterval(progressTimer);
+    }
+
+    function startProgress(charLen) {
+      // rough estimate: 100ms per character at rate 1.0
+      const rate = parseFloat(rateSlider.value);
+      const durationMs = (charLen * 100) / rate;
+      progressWrap.classList.add('visible');
+      progressBar.style.width = '0%';
+      const start = Date.now();
+      progressTimer = setInterval(() => {
+        const pct = Math.min(((Date.now() - start) / durationMs) * 100, 98);
+        progressBar.style.width = pct + '%';
+      }, 150);
+    }
+
+    /* ═══════════════════════════════════════
+       HuggingFace SILMA-TTS
+    ═══════════════════════════════════════ */
+    const hfSpeakBtn = document.getElementById('hfSpeakBtn');
+    const hfAudio    = document.getElementById('hfAudio');
+    const hfStatus   = document.getElementById('hfStatus');
+    const hfTokenEl  = document.getElementById('hfToken');
+    const modelSelect = document.getElementById('modelSelect');
+
+    hfSpeakBtn.addEventListener('click', async () => {
+      const text = textInput.value.trim();
+      if (!text) { alert('اكتبي النص أولاً في الحقل أعلاه'); textInput.focus(); return; }
+
+      const token = hfTokenEl.value.trim();
+      if (!token) { alert('⚠️ أدخلي HuggingFace Token'); hfTokenEl.focus(); return; }
+
+      const model = modelSelect.value;
+      const url = `https://api-inference.huggingface.co/models/${model}`;
+
+      hfSpeakBtn.disabled = true;
+      hfSpeakBtn.innerHTML = 'جاري التوليد... <span class="spinner"></span>';
+      hfStatus.textContent = '⏳ يتم إرسال النص إلى النموذج...';
+      hfAudio.style.display = 'none';
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ inputs: text }),
+        });
+
+        if (response.status === 503) {
+          hfStatus.textContent = '⏳ النموذج يتحمّل، انتظري 20 ثانية وأعيدي المحاولة...';
+          return;
+        }
+
+        if (!response.ok) {
+          const err = await response.text();
+          throw new Error(`HTTP ${response.status}: ${err}`);
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await response.json();
+          // some models return base64 audio
+          if (data.audio) {
+            const audioBlob = b64ToBlob(data.audio, 'audio/wav');
+            playBlob(audioBlob);
+          } else {
+            throw new Error('النموذج أرجع JSON بدون بيانات صوت — جربي نموذج آخر');
+          }
+        } else {
+          // raw audio bytes
+          const blob = await response.blob();
+          playBlob(blob);
+        }
+
+        hfStatus.textContent = '✅ تم التوليد! اضغطي تشغيل أدناه 👇';
+      } catch (err) {
+        hfStatus.textContent = `❌ ${err.message}`;
+      } finally {
+        hfSpeakBtn.disabled = false;
+        hfSpeakBtn.textContent = '🌸 توليد الصوت النجدي';
+      }
+    });
+
+    function playBlob(blob) {
+      const url = URL.createObjectURL(blob);
+      hfAudio.src = url;
+      hfAudio.style.display = 'block';
+      hfAudio.play();
+    }
+
+    function b64ToBlob(b64, mime) {
+      const bytes = atob(b64);
+      const arr = new Uint8Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+      return new Blob([arr], { type: mime });
+    }
+  </script>
+</body>
+</html>
