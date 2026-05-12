@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saudi Najdi Dialect STT — لهجة نجدية</title>
+  <style>
+    :root {
+      --rose:    #e91e8c;
+      --rose-lt: #f472b6;
+      --rose-bg: #fdf2f8;
+      --sand:    #f5ede0;
+      --sand-d:  #d4a96a;
+      --green:   #006c35;   /* Saudi green */
+      --white:   #ffffff;
+      --gray:    #6b7280;
+      --dark:    #1f2937;
+      --radius:  16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', 'Noto Kufi Arabic', Tahoma, sans-serif;
+      background: linear-gradient(135deg, var(--rose-bg) 0%, var(--sand) 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+      color: var(--dark);
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .crown { font-size: 2.4rem; line-height: 1; }
+
+    header h1 {
+      font-size: 1.9rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--rose), var(--sand-d));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 6px 0 4px;
+    }
+
+    header p {
+      color: var(--gray);
+      font-size: .95rem;
+      direction: rtl;
+    }
+
+    /* ── Badge row ── */
+    .badges {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+
+    .badge {
+      background: var(--white);
+      border: 1.5px solid var(--rose-lt);
+      color: var(--rose);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: .78rem;
+      font-weight: 700;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 32px rgba(233,30,140,.12);
+      padding: 28px;
+      width: 100%;
+      max-width: 680px;
+    }
+
+    .card + .card { margin-top: 20px; }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Mic button ── */
+    .mic-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    #micBtn {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--rose), #c2185b);
+      box-shadow: 0 6px 24px rgba(233,30,140,.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform .15s, box-shadow .15s;
+      position: relative;
+    }
+
+    #micBtn:hover { transform: scale(1.06); }
+
+    #micBtn.recording {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      box-shadow: 0 6px 28px rgba(239,68,68,.55);
+      animation: pulse 1.4s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 6px 28px rgba(239,68,68,.55); }
+      50%       { box-shadow: 0 6px 40px rgba(239,68,68,.85); }
+    }
+
+    #micBtn svg { width: 42px; height: 42px; fill: var(--white); }
+
+    #statusLabel {
+      font-size: .88rem;
+      font-weight: 600;
+      color: var(--gray);
+      direction: rtl;
+    }
+
+    #statusLabel.active { color: #ef4444; }
+
+    /* ── Waveform bars ── */
+    .wave {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 28px;
+      visibility: hidden;
+    }
+
+    .wave.visible { visibility: visible; }
+
+    .bar {
+      width: 5px;
+      border-radius: 3px;
+      background: var(--rose-lt);
+      height: 8px;
+      animation: wave-anim 1s infinite ease-in-out;
+    }
+
+    .bar:nth-child(2) { animation-delay: .1s; }
+    .bar:nth-child(3) { animation-delay: .2s; }
+    .bar:nth-child(4) { animation-delay: .3s; }
+    .bar:nth-child(5) { animation-delay: .4s; }
+
+    @keyframes wave-anim {
+      0%, 100% { height: 8px; }
+      50%       { height: 24px; }
+    }
+
+    /* ── Output ── */
+    .output-area {
+      background: var(--rose-bg);
+      border: 1.5px solid #f9a8d4;
+      border-radius: 12px;
+      min-height: 120px;
+      padding: 16px;
+      font-size: 1.1rem;
+      line-height: 1.8;
+      direction: rtl;
+      text-align: right;
+      color: var(--dark);
+      word-break: break-word;
+      white-space: pre-wrap;
+      position: relative;
+    }
+
+    .output-area .placeholder {
+      color: #d1afc0;
+      font-size: .95rem;
+      position: absolute;
+      inset: 16px;
+      pointer-events: none;
+    }
+
+    .interim { color: #9ca3af; font-style: italic; }
+
+    /* ── Action buttons ── */
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    button.action {
+      border: none;
+      cursor: pointer;
+      border-radius: 10px;
+      padding: 9px 20px;
+      font-size: .85rem;
+      font-weight: 700;
+      transition: opacity .15s, transform .1s;
+    }
+
+    button.action:hover { opacity: .88; transform: translateY(-1px); }
+    button.action:active { transform: translateY(0); }
+
+    .btn-copy  { background: var(--rose);  color: #fff; }
+    .btn-clear { background: #f3f4f6; color: var(--gray); }
+
+    /* ── Divider ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #d1d5db;
+      font-size: .8rem;
+      margin: 4px 0;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #f0f0f0;
+    }
+
+    /* ── File upload section ── */
+    .upload-section { margin-top: 4px; }
+
+    .hf-key-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .hf-key-row label {
+      font-size: .82rem;
+      font-weight: 600;
+      white-space: nowrap;
+      color: var(--gray);
+    }
+
+    .hf-key-row input {
+      flex: 1;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: .85rem;
+      direction: ltr;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .hf-key-row input:focus { border-color: var(--rose-lt); }
+
+    .drop-zone {
+      border: 2px dashed #f9a8d4;
+      border-radius: 12px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: background .15s;
+      color: var(--gray);
+      font-size: .9rem;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over { background: var(--rose-bg); }
+
+    .drop-zone input[type="file"] { display: none; }
+
+    .drop-icon { font-size: 2rem; margin-bottom: 8px; }
+
+    #fileName {
+      font-size: .8rem;
+      color: var(--rose);
+      margin-top: 8px;
+      font-weight: 600;
+    }
+
+    #transcribeBtn {
+      width: 100%;
+      margin-top: 14px;
+      padding: 12px;
+      background: linear-gradient(90deg, var(--rose), #c2185b);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+
+    #transcribeBtn:disabled { opacity: .45; cursor: not-allowed; }
+    #transcribeBtn:not(:disabled):hover { opacity: .9; }
+
+    .upload-output {
+      background: var(--rose-bg);
+      border: 1.5px solid #f9a8d4;
+      border-radius: 12px;
+      min-height: 80px;
+      padding: 14px;
+      font-size: 1rem;
+      direction: rtl;
+      text-align: right;
+      color: var(--dark);
+      margin-top: 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 3px solid rgba(255,255,255,.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Info box ── */
+    .info-box {
+      background: #f0fdf4;
+      border: 1.5px solid #86efac;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: .83rem;
+      line-height: 1.65;
+      color: #166534;
+      direction: rtl;
+    }
+
+    .info-box a { color: var(--rose); text-decoration: none; font-weight: 700; }
+    .info-box a:hover { text-decoration: underline; }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 32px;
+      font-size: .78rem;
+      color: #d1afc0;
+      text-align: center;
+    }
+
+    @media (max-width: 480px) {
+      header h1 { font-size: 1.4rem; }
+      .card { padding: 20px; }
+      #micBtn { width: 80px; height: 80px; }
+      #micBtn svg { width: 34px; height: 34px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="crown">👸🏻</div>
+    <h1>تحويل الصوت النجدي إلى نص</h1>
+    <p>Saudi Najdi Dialect Speech-to-Text</p>
+  </header>
+
+  <div class="badges">
+    <span class="badge">🎙️ لهجة نجدية</span>
+    <span class="badge">🆓 مجاني بالكامل</span>
+    <span class="badge">🌐 يعمل في المتصفح</span>
+  </div>
+
+  <!-- ── Live Mic Card ── -->
+  <div class="card">
+    <div class="card-title">
+      🎤 التسجيل المباشر
+      <span style="font-size:.75rem;font-weight:400;color:var(--gray);margin-right:auto;">Web Speech API · ar-SA</span>
+    </div>
+
+    <div class="mic-wrap">
+      <button id="micBtn" title="اضغطي للتسجيل">
+        <svg id="micIcon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm6.36 9.5a.75.75 0 0 1 .75.75A7.125 7.125 0 0 1 12.75 18.4V21h2.5a.75.75 0 0 1 0 1.5h-6.5a.75.75 0 0 1 0-1.5h2.5v-2.6A7.125 7.125 0 0 1 4.89 11.25a.75.75 0 0 1 1.5 0 5.625 5.625 0 0 0 11.22 0 .75.75 0 0 1 .75-.75z"/>
+        </svg>
+      </button>
+
+      <div class="wave" id="wave">
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        <div class="bar"></div><div class="bar"></div>
+      </div>
+
+      <span id="statusLabel">اضغطي على الميكروفون للبدء</span>
+    </div>
+
+    <div class="output-area" id="liveOutput">
+      <span class="placeholder" id="livePlaceholder">ستظهر هنا الكلمات المحوّلة...</span>
+    </div>
+
+    <div class="actions">
+      <button class="action btn-copy"  id="copyLive">📋 نسخ النص</button>
+      <button class="action btn-clear" id="clearLive">🗑️ مسح</button>
+    </div>
+  </div>
+
+  <!-- ── File Upload Card ── -->
+  <div class="card">
+    <div class="card-title">
+      📁 رفع ملف صوتي
+      <span style="font-size:.75rem;font-weight:400;color:var(--gray);margin-right:auto;">Whisper · HuggingFace (مجاني)</span>
+    </div>
+
+    <div class="upload-section">
+      <div class="hf-key-row">
+        <label for="hfToken">🔑 HF Token:</label>
+        <input type="password" id="hfToken" placeholder="hf_xxxxxxxxxxxxxxxx" autocomplete="off" />
+      </div>
+      <p style="font-size:.78rem;color:var(--gray);margin-bottom:12px;direction:rtl;">
+        احصلي على توكن مجاني من
+        <a href="https://huggingface.co/settings/tokens" target="_blank" style="color:var(--rose);font-weight:700;">HuggingFace</a>
+        — حساب مجاني · لا بطاقة مطلوبة
+      </p>
+
+      <label class="drop-zone" id="dropZone">
+        <input type="file" id="audioFile" accept="audio/*,video/webm,video/mp4" />
+        <div class="drop-icon">🎵</div>
+        <div>اسحبي ملفك الصوتي هنا أو اضغطي للاختيار</div>
+        <div style="font-size:.78rem;margin-top:4px;">MP3 · WAV · OGG · M4A · WebM</div>
+        <div id="fileName"></div>
+      </label>
+
+      <button id="transcribeBtn" disabled>تحويل الصوت إلى نص ✨</button>
+
+      <div class="upload-output" id="uploadOutput" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ── Info Card ── -->
+  <div class="card">
+    <div class="info-box">
+      <strong>كيف يعمل؟ 🌸</strong><br/>
+      <strong>التسجيل المباشر:</strong> يستخدم Web Speech API المدمج في المتصفح مع اللغة <code>ar-SA</code>. يعمل في Chrome وEdge بدون أي مفتاح API — مجاناً وفورياً.<br/><br/>
+      <strong>رفع ملف:</strong> يستخدم نموذج <a href="https://huggingface.co/openai/whisper-large-v3" target="_blank">Whisper Large v3</a> من OpenAI عبر HuggingFace Inference API. يدعم اللهجة النجدية وسائر اللهجات العربية. التوكن مجاني من <a href="https://huggingface.co/settings/tokens" target="_blank">huggingface.co</a>.<br/><br/>
+      <strong>ملاحظة:</strong> للنتائج الأفضل، تحدثي بوضوح وقريباً من الميكروفون 💬
+    </div>
+  </div>
+
+  <footer>Made with 💗 for Najdi voices</footer>
+
+  <script>
+    /* ─────────────────────────────────────────
+       Live Mic  (Web Speech API)
+    ───────────────────────────────────────── */
+    const micBtn       = document.getElementById('micBtn');
+    const statusLabel  = document.getElementById('statusLabel');
+    const liveOutput   = document.getElementById('liveOutput');
+    const livePlaceholder = document.getElementById('livePlaceholder');
+    const waveEl       = document.getElementById('wave');
+    const copyLiveBtn  = document.getElementById('copyLive');
+    const clearLiveBtn = document.getElementById('clearLive');
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    let recognition = null;
+    let isRecording = false;
+    let finalTranscript = '';
+
+    if (!SpeechRecognition) {
+      statusLabel.textContent = '⚠️ المتصفح لا يدعم Web Speech API — استخدمي Chrome أو Edge';
+      micBtn.disabled = true;
+      micBtn.style.opacity = '.4';
+    } else {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'ar-SA';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += t + ' ';
+          } else {
+            interim += t;
+          }
+        }
+        renderLive(finalTranscript, interim);
+      };
+
+      recognition.onerror = (e) => {
+        if (e.error === 'no-speech') return;
+        statusLabel.textContent = `خطأ: ${e.error}`;
+        stopRecording();
+      };
+
+      recognition.onend = () => {
+        if (isRecording) {
+          // auto-restart to keep continuous recording
+          try { recognition.start(); } catch (_) {}
+        }
+      };
+    }
+
+    function renderLive(final, interim) {
+      livePlaceholder.style.display = 'none';
+      liveOutput.innerHTML =
+        `<span>${escapeHtml(final)}</span>` +
+        (interim ? `<span class="interim">${escapeHtml(interim)}</span>` : '');
+    }
+
+    function startRecording() {
+      finalTranscript = '';
+      liveOutput.innerHTML = '';
+      livePlaceholder.style.display = '';
+      isRecording = true;
+      micBtn.classList.add('recording');
+      waveEl.classList.add('visible');
+      statusLabel.textContent = '🔴 جاري التسجيل... تحدثي الآن';
+      statusLabel.classList.add('active');
+      recognition.start();
+    }
+
+    function stopRecording() {
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      waveEl.classList.remove('visible');
+      statusLabel.textContent = 'اضغطي على الميكروفون للبدء';
+      statusLabel.classList.remove('active');
+      try { recognition.stop(); } catch (_) {}
+    }
+
+    micBtn.addEventListener('click', () => {
+      if (!recognition) return;
+      isRecording ? stopRecording() : startRecording();
+    });
+
+    copyLiveBtn.addEventListener('click', () => {
+      const text = finalTranscript.trim();
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        copyLiveBtn.textContent = '✅ تم النسخ!';
+        setTimeout(() => (copyLiveBtn.textContent = '📋 نسخ النص'), 2000);
+      });
+    });
+
+    clearLiveBtn.addEventListener('click', () => {
+      if (isRecording) stopRecording();
+      finalTranscript = '';
+      liveOutput.innerHTML = '';
+      livePlaceholder.style.display = '';
+    });
+
+    /* ─────────────────────────────────────────
+       File Upload  (HuggingFace Whisper)
+    ───────────────────────────────────────── */
+    const dropZone      = document.getElementById('dropZone');
+    const audioFileEl   = document.getElementById('audioFile');
+    const fileNameEl    = document.getElementById('fileName');
+    const transcribeBtn = document.getElementById('transcribeBtn');
+    const uploadOutput  = document.getElementById('uploadOutput');
+    const hfTokenEl     = document.getElementById('hfToken');
+
+    const WHISPER_URL = 'https://api-inference.huggingface.co/models/openai/whisper-large-v3';
+
+    let selectedFile = null;
+
+    dropZone.addEventListener('click', () => audioFileEl.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) setFile(file);
+    });
+
+    audioFileEl.addEventListener('change', () => {
+      if (audioFileEl.files[0]) setFile(audioFileEl.files[0]);
+    });
+
+    function setFile(file) {
+      selectedFile = file;
+      fileNameEl.textContent = `📎 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      transcribeBtn.disabled = false;
+    }
+
+    transcribeBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      const token = hfTokenEl.value.trim();
+      if (!token) {
+        alert('⚠️ أدخلي HuggingFace Token أولاً');
+        hfTokenEl.focus();
+        return;
+      }
+
+      transcribeBtn.disabled = true;
+      transcribeBtn.innerHTML = 'جاري التحويل... <span class="spinner"></span>';
+      uploadOutput.style.display = 'block';
+      uploadOutput.textContent = '⏳ يتم إرسال الملف إلى Whisper...';
+
+      try {
+        const response = await fetch(WHISPER_URL, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': selectedFile.type || 'audio/wav',
+          },
+          body: selectedFile,
+        });
+
+        if (response.status === 503) {
+          uploadOutput.textContent = '⏳ النموذج يتحمّل، انتظري 20 ثانية ثم حاولي مجدداً...';
+          transcribeBtn.disabled = false;
+          transcribeBtn.textContent = 'تحويل الصوت إلى نص ✨';
+          return;
+        }
+
+        if (!response.ok) {
+          const err = await response.text();
+          throw new Error(`HTTP ${response.status}: ${err}`);
+        }
+
+        const data = await response.json();
+        const text = data.text || data[0]?.text || JSON.stringify(data);
+        uploadOutput.textContent = text || '(لم يتم التعرف على كلام)';
+      } catch (err) {
+        uploadOutput.textContent = `❌ خطأ: ${err.message}`;
+      } finally {
+        transcribeBtn.disabled = false;
+        transcribeBtn.textContent = 'تحويل الصوت إلى نص ✨';
+      }
+    });
+
+    /* ─────────────────────────────────────────
+       Helpers
+    ───────────────────────────────────────── */
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+  </script>
+</body>
+</html>
